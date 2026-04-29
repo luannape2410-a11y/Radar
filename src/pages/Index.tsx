@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Building2, ListChecks, CheckCircle2, Layers, Receipt } from "lucide-react";
+import { AlertTriangle, Building2, ListChecks, CheckCircle2, Layers, Receipt, GitCompareArrows } from "lucide-react";
 import { useLancamentos, useUnidades } from "@/hooks/useOrcamento";
-import { Filtros, type FiltroState } from "@/components/orcamento/Filtros";
+import { Filtros, bucketsParaMeses, type FiltroState } from "@/components/orcamento/Filtros";
 import { KpiCard } from "@/components/orcamento/KpiCard";
 import { GraficoUnidades } from "@/components/orcamento/GraficoUnidades";
 import { GraficoCategoria } from "@/components/orcamento/GraficoCategoria";
 import { SecaoAlertas } from "@/components/orcamento/SecaoAlertas";
+import { SecaoComparativo } from "@/components/orcamento/SecaoComparativo";
 import { TabelaLancamentos } from "@/components/orcamento/TabelaLancamentos";
 import { ImportadorPlanilha } from "@/components/orcamento/ImportadorPlanilha";
 import { fmtBRL } from "@/lib/format";
@@ -17,23 +18,44 @@ const Index = () => {
     unidadeId: "todos",
     tipoUnidade: "todos",
     busca: "",
+    periodicidade: "anual",
+    periodoIndex: 0,
+    funcao: "todas",
   });
 
   const { data: unidades = [] } = useUnidades();
-  const { data: lancamentos = [], isLoading } = useLancamentos(filtro.exercicio);
+  // Carrega TODOS os exercícios para suportar o comparativo entre anos.
+  const { data: lancamentosTodos = [], isLoading } = useLancamentos();
 
-  const filtrados = useMemo(() => {
+  // Lista de funções disponíveis para o filtro
+  const funcoes = useMemo(() => {
+    const set = new Set<string>();
+    lancamentosTodos.forEach((l) => l.funcao && set.add(l.funcao));
+    return Array.from(set).sort();
+  }, [lancamentosTodos]);
+
+  // Aplica filtros COMUNS (unidade, tipo, função, busca, período) — exceto exercício
+  const filtradosSemAno = useMemo(() => {
+    const meses = new Set(bucketsParaMeses(filtro.periodicidade, filtro.periodoIndex));
     const q = filtro.busca.trim().toLowerCase();
-    return lancamentos.filter((l) => {
+    return lancamentosTodos.filter((l) => {
       if (filtro.unidadeId !== "todos" && l.unidade_id !== filtro.unidadeId) return false;
       if (filtro.tipoUnidade !== "todos" && l.unidades?.tipo !== filtro.tipoUnidade) return false;
+      if (filtro.funcao !== "todas" && l.funcao !== filtro.funcao) return false;
+      if (!meses.has(l.mes)) return false;
       if (q) {
         const hay = `${l.subelementos?.codigo ?? ""} ${l.subelementos?.descricao ?? ""} ${l.fornecedores?.nome ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [lancamentos, filtro]);
+  }, [lancamentosTodos, filtro]);
+
+  // Para todas as seções (exceto comparativo) também restringe ao exercício selecionado
+  const filtrados = useMemo(
+    () => filtradosSemAno.filter((l) => l.exercicio === filtro.exercicio),
+    [filtradosSemAno, filtro.exercicio]
+  );
 
   const totais = useMemo(() => {
     const pago = filtrados.reduce((acc, l) => acc + Number(l.valor_pago), 0);
@@ -64,9 +86,15 @@ const Index = () => {
 
   const exercicios = useMemo(() => {
     const set = new Set<number>([new Date().getFullYear(), 2025]);
-    lancamentos.forEach((l) => set.add(l.exercicio));
+    lancamentosTodos.forEach((l) => set.add(l.exercicio));
     return Array.from(set).sort((a, b) => b - a);
-  }, [lancamentos]);
+  }, [lancamentosTodos]);
+
+  const exerciciosComDados = useMemo(() => {
+    const set = new Set<number>();
+    lancamentosTodos.forEach((l) => set.add(l.exercicio));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [lancamentosTodos]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -85,7 +113,13 @@ const Index = () => {
       </header>
 
       <main className="container py-6 space-y-6">
-        <Filtros state={filtro} onChange={setFiltro} unidades={unidades as any} exercicios={exercicios} />
+        <Filtros
+          state={filtro}
+          onChange={setFiltro}
+          unidades={unidades as any}
+          exercicios={exercicios}
+          funcoes={funcoes}
+        />
 
         {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -99,6 +133,7 @@ const Index = () => {
           <TabsList>
             <TabsTrigger value="dashboard"><Building2 className="h-4 w-4 mr-1.5" /> Dashboard</TabsTrigger>
             <TabsTrigger value="alertas"><AlertTriangle className="h-4 w-4 mr-1.5" /> Alertas</TabsTrigger>
+            <TabsTrigger value="comparativo"><GitCompareArrows className="h-4 w-4 mr-1.5" /> Comparativo</TabsTrigger>
             <TabsTrigger value="lancamentos"><ListChecks className="h-4 w-4 mr-1.5" /> Lançamentos</TabsTrigger>
           </TabsList>
 
@@ -111,6 +146,10 @@ const Index = () => {
 
           <TabsContent value="alertas" className="mt-4">
             <SecaoAlertas lancamentos={filtrados} />
+          </TabsContent>
+
+          <TabsContent value="comparativo" className="mt-4">
+            <SecaoComparativo lancamentos={filtradosSemAno} exercicios={exerciciosComDados} />
           </TabsContent>
 
           <TabsContent value="lancamentos" className="mt-4">
