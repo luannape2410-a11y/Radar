@@ -3,12 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, TrendingDown, Activity, ChevronRight } from "lucide-react";
+import { AlertTriangle, PieChart, Activity, ChevronRight } from "lucide-react";
 import { fmtBRL, fmtPct } from "@/lib/format";
 import {
   alertasAtipicos,
-  alertasBaixaExecucao,
-  alertasExcessoEmpenho,
+  alertasConcentracao,
+  alertasAltoCusto,
   type AlertaItem,
 } from "@/lib/alertas";
 import type { Lancamento } from "@/hooks/useOrcamento";
@@ -25,22 +25,22 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
-type TipoAlerta = "baixa" | "excesso" | "atipico";
+type TipoAlerta = "concentracao" | "altocusto" | "atipico";
 
 const tiposConfig: Record<
   TipoAlerta,
   { titulo: string; descricao: string; icon: typeof AlertTriangle; tone: string; cor: string }
 > = {
-  baixa: {
-    titulo: "Baixa execução",
-    descricao: "Unidades com % executado abaixo de 30%",
-    icon: TrendingDown,
+  concentracao: {
+    titulo: "Concentração de gastos",
+    descricao: "Unidades que concentram ≥ 15% do total pago",
+    icon: PieChart,
     tone: "text-warning bg-warning/15",
     cor: "hsl(var(--warning))",
   },
-  excesso: {
-    titulo: "Excesso de empenhos",
-    descricao: "Empenhado ≥ 90% da dotação",
+  altocusto: {
+    titulo: "Subelementos de alto custo",
+    descricao: "Categorias que respondem por ≥ 10% do pago",
     icon: AlertTriangle,
     tone: "text-destructive bg-destructive/10",
     cor: "hsl(var(--destructive))",
@@ -55,13 +55,13 @@ const tiposConfig: Record<
 };
 
 export function SecaoAlertas({ lancamentos }: { lancamentos: Lancamento[] }) {
-  const baixa = useMemo(() => alertasBaixaExecucao(lancamentos), [lancamentos]);
-  const excesso = useMemo(() => alertasExcessoEmpenho(lancamentos), [lancamentos]);
+  const concentracao = useMemo(() => alertasConcentracao(lancamentos), [lancamentos]);
+  const altocusto = useMemo(() => alertasAltoCusto(lancamentos), [lancamentos]);
   const atipicos = useMemo(() => alertasAtipicos(lancamentos), [lancamentos]);
 
-  const grupos: Record<TipoAlerta, AlertaItem[]> = { baixa, excesso, atipico: atipicos };
+  const grupos: Record<TipoAlerta, AlertaItem[]> = { concentracao, altocusto, atipico: atipicos };
   const [tipoSel, setTipoSel] = useState<TipoAlerta>(
-    baixa.length ? "baixa" : excesso.length ? "excesso" : "atipico"
+    concentracao.length ? "concentracao" : altocusto.length ? "altocusto" : "atipico"
   );
   const [itemSel, setItemSel] = useState<AlertaItem | null>(null);
 
