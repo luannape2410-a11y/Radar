@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, FileSpreadsheet, AlertTriangle, Building2, ListChecks, TrendingUp, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Building2, ListChecks, CheckCircle2, Layers, Receipt } from "lucide-react";
 import { useLancamentos, useUnidades } from "@/hooks/useOrcamento";
 import { Filtros, type FiltroState } from "@/components/orcamento/Filtros";
 import { KpiCard } from "@/components/orcamento/KpiCard";
@@ -9,7 +9,7 @@ import { GraficoCategoria } from "@/components/orcamento/GraficoCategoria";
 import { SecaoAlertas } from "@/components/orcamento/SecaoAlertas";
 import { TabelaLancamentos } from "@/components/orcamento/TabelaLancamentos";
 import { ImportadorPlanilha } from "@/components/orcamento/ImportadorPlanilha";
-import { fmtBRL, fmtPct } from "@/lib/format";
+import { fmtBRL } from "@/lib/format";
 
 const Index = () => {
   const [filtro, setFiltro] = useState<FiltroState>({
@@ -36,17 +36,11 @@ const Index = () => {
   }, [lancamentos, filtro]);
 
   const totais = useMemo(() => {
-    const t = filtrados.reduce(
-      (acc, l) => ({
-        dotacao: acc.dotacao + Number(l.valor_dotacao),
-        empenhado: acc.empenhado + Number(l.valor_empenhado),
-        liquidado: acc.liquidado + Number(l.valor_liquidado),
-        pago: acc.pago + Number(l.valor_pago),
-      }),
-      { dotacao: 0, empenhado: 0, liquidado: 0, pago: 0 }
-    );
-    const base = t.dotacao || t.empenhado;
-    return { ...t, execPct: base ? t.pago / base : 0 };
+    const pago = filtrados.reduce((acc, l) => acc + Number(l.valor_pago), 0);
+    const unidades = new Set(filtrados.map((l) => l.unidade_id)).size;
+    const subs = new Set(filtrados.map((l) => l.subelemento_id)).size;
+    const ticket = filtrados.length ? pago / filtrados.length : 0;
+    return { pago, unidades, subs, ticket, registros: filtrados.length };
   }, [filtrados]);
 
   const dataUnidades = useMemo(() => {
@@ -94,12 +88,11 @@ const Index = () => {
         <Filtros state={filtro} onChange={setFiltro} unidades={unidades as any} exercicios={exercicios} />
 
         {/* KPIs */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <KpiCard label="Dotação" value={fmtBRL(totais.dotacao)} icon={Wallet} tone="primary" />
-          <KpiCard label="Empenhado" value={fmtBRL(totais.empenhado)} icon={FileSpreadsheet} tone="accent" />
-          <KpiCard label="Liquidado" value={fmtBRL(totais.liquidado)} icon={ListChecks} tone="success" />
-          <KpiCard label="Pago" value={fmtBRL(totais.pago)} icon={CheckCircle2} tone="success" />
-          <KpiCard label="% Execução" value={fmtPct(totais.execPct)} hint="Pago / Dotação" icon={TrendingUp} tone="warning" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label="Total pago" value={fmtBRL(totais.pago)} icon={CheckCircle2} tone="success" />
+          <KpiCard label="Unidades" value={String(totais.unidades)} hint="Secretarias / fundos" icon={Building2} tone="primary" />
+          <KpiCard label="Subelementos" value={String(totais.subs)} hint="Naturezas de despesa" icon={Layers} tone="accent" />
+          <KpiCard label="Ticket médio" value={fmtBRL(totais.ticket)} hint={`${totais.registros} registros`} icon={Receipt} tone="warning" />
         </div>
 
         <Tabs defaultValue="dashboard">

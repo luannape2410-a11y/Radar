@@ -9,58 +9,62 @@ export type AlertaItem = {
   contexto: Record<string, unknown>;
 };
 
-/** Baixa execução: unidade com % pago/dotação < limite. Se dotação=0, usa pago/empenhado. */
-export function alertasBaixaExecucao(lancs: Lancamento[], limite = 0.3): AlertaItem[] {
-  const map = new Map<string, { nome: string; pago: number; empenhado: number; dotacao: number }>();
+/** Concentração de gastos: unidades que sozinhas respondem por fatia desproporcional do total pago (>= limite). */
+export function alertasConcentracao(lancs: Lancamento[], limite = 0.15): AlertaItem[] {
+  const map = new Map<string, { nome: string; pago: number }>();
+  let total = 0;
   for (const l of lancs) {
-    const key = l.unidade_id;
-    const cur = map.get(key) ?? { nome: l.unidades?.nome ?? "—", pago: 0, empenhado: 0, dotacao: 0 };
-    cur.pago += Number(l.valor_pago);
-    cur.empenhado += Number(l.valor_empenhado);
-    cur.dotacao += Number(l.valor_dotacao);
-    map.set(key, cur);
+    const v = Number(l.valor_pago);
+    total += v;
+    const cur = map.get(l.unidade_id) ?? { nome: l.unidades?.nome ?? "—", pago: 0 };
+    cur.pago += v;
+    map.set(l.unidade_id, cur);
   }
+  if (total <= 0) return [];
   const itens: AlertaItem[] = [];
   for (const [id, v] of map) {
-    const base = v.dotacao > 0 ? v.dotacao : v.empenhado;
-    if (base <= 0) continue;
-    const pct = v.pago / base;
-    if (pct < limite) {
-      itens.push({
-        id,
-        rotulo: v.nome,
-        detalhe: `Execução ${(pct * 100).toFixed(1)}% — abaixo do esperado`,
-        valor: v.pago,
-        metrica: pct,
-        contexto: { ...v, base },
-      });
-    }
-  }
-  return itens.sort((a, b) => a.metrica - b.metrica);
-}
-
-/** Excesso de empenhos: empenhado/dotação >= 90% (apenas onde há dotação). */
-export function alertasExcessoEmpenho(lancs: Lancamento[], limite = 0.9): AlertaItem[] {
-  const map = new Map<string, { nome: string; empenhado: number; dotacao: number }>();
-  for (const l of lancs) {
-    const key = l.unidade_id;
-    const cur = map.get(key) ?? { nome: l.unidades?.nome ?? "—", empenhado: 0, dotacao: 0 };
-    cur.empenhado += Number(l.valor_empenhado);
-    cur.dotacao += Number(l.valor_dotacao);
-    map.set(key, cur);
-  }
-  const itens: AlertaItem[] = [];
-  for (const [id, v] of map) {
-    if (v.dotacao <= 0) continue;
-    const pct = v.empenhado / v.dotacao;
+    const pct = v.pago / total;
     if (pct >= limite) {
       itens.push({
         id,
         rotulo: v.nome,
-        detalhe: `Empenhado ${(pct * 100).toFixed(1)}% da dotação`,
-        valor: v.empenhado,
+        detalhe: `Concentra ${(pct * 100).toFixed(1)}% do total pago`,
+        valor: v.pago,
         metrica: pct,
-        contexto: v,
+        contexto: { ...v, total },
+      });
+    }
+  }
+  return itens.sort((a, b) => b.metrica - a.metrica);
+}
+
+/** Subelementos de alto custo: top categorias por valor pago acima de limite (% do total). */
+export function alertasAltoCusto(lancs: Lancamento[], limite = 0.1): AlertaItem[] {
+  const map = new Map<string, { codigo: string; descricao: string; pago: number }>();
+  let total = 0;
+  for (const l of lancs) {
+    const v = Number(l.valor_pago);
+    total += v;
+    const cur = map.get(l.subelemento_id) ?? {
+      codigo: l.subelementos?.codigo ?? "—",
+      descricao: l.subelementos?.descricao ?? "—",
+      pago: 0,
+    };
+    cur.pago += v;
+    map.set(l.subelemento_id, cur);
+  }
+  if (total <= 0) return [];
+  const itens: AlertaItem[] = [];
+  for (const [id, v] of map) {
+    const pct = v.pago / total;
+    if (pct >= limite) {
+      itens.push({
+        id,
+        rotulo: `${v.codigo} — ${v.descricao}`,
+        detalhe: `${(pct * 100).toFixed(1)}% do total pago`,
+        valor: v.pago,
+        metrica: pct,
+        contexto: { ...v, total },
       });
     }
   }

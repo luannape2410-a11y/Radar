@@ -48,7 +48,6 @@ export function TabelaLancamentos({ lancamentos }: { lancamentos: Lancamento[] }
               <th className="px-3 py-2 text-left">Subelemento</th>
               <th className="px-3 py-2 text-left">Unidade</th>
               <th className="px-3 py-2 text-left">Fornecedor</th>
-              <th className="px-3 py-2 text-right">Empenhado</th>
               <th className="px-3 py-2 text-right">Pago</th>
               <th className="px-3 py-2 text-right w-24">Ações</th>
             </tr>
@@ -62,7 +61,6 @@ export function TabelaLancamentos({ lancamentos }: { lancamentos: Lancamento[] }
                 </td>
                 <td className="px-3 py-2 text-xs">{l.unidades?.nome}</td>
                 <td className="px-3 py-2 text-xs">{l.fornecedores?.nome ?? "—"}</td>
-                <td className="px-3 py-2 text-right font-medium">{fmtBRL(l.valor_empenhado)}</td>
                 <td className="px-3 py-2 text-right font-medium">{fmtBRL(l.valor_pago)}</td>
                 <td className="px-3 py-2 text-right">
                   <Button size="icon" variant="ghost" onClick={() => setEditar(l)}><Pencil className="h-3.5 w-3.5" /></Button>
@@ -71,7 +69,7 @@ export function TabelaLancamentos({ lancamentos }: { lancamentos: Lancamento[] }
               </tr>
             ))}
             {lancamentos.length === 0 && (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-12 text-sm">Nenhum lançamento encontrado.</td></tr>
+              <tr><td colSpan={5} className="text-center text-muted-foreground py-12 text-sm">Nenhum lançamento encontrado.</td></tr>
             )}
           </tbody>
         </table>
