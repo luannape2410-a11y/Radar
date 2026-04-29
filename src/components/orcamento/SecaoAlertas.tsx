@@ -187,16 +187,16 @@ function DetalheAlerta({
 }) {
   const cfg = tiposConfig[tipo];
 
-  // Para baixa/excesso: gráfico de Dotação vs Empenhado vs Pago da unidade
-  if (tipo === "baixa" || tipo === "excesso") {
-    const ctx = item.contexto as { dotacao: number; empenhado: number; pago: number };
+  // Concentração / Alto custo: comparação com restante + top itens
+  if (tipo === "concentracao" || tipo === "altocusto") {
+    const ctx = item.contexto as { total: number; pago: number };
+    const restante = Math.max(ctx.total - ctx.pago, 0);
     const data = [
-      { tipo: "Dotação", valor: ctx.dotacao, fill: "hsl(var(--muted-foreground))" },
-      { tipo: "Empenhado", valor: ctx.empenhado, fill: "hsl(var(--primary))" },
-      { tipo: "Pago", valor: ctx.pago, fill: "hsl(var(--accent))" },
+      { tipo: tipo === "concentracao" ? "Esta unidade" : "Este subelemento", valor: ctx.pago, fill: "hsl(var(--destructive))" },
+      { tipo: "Demais", valor: restante, fill: "hsl(var(--muted-foreground))" },
     ];
-    const lancsUnid = lancamentos
-      .filter((l) => l.unidade_id === item.id)
+    const filhos = lancamentos
+      .filter((l) => (tipo === "concentracao" ? l.unidade_id === item.id : l.subelemento_id === item.id))
       .sort((a, b) => Number(b.valor_pago) - Number(a.valor_pago))
       .slice(0, 8);
     return (
@@ -218,21 +218,31 @@ function DetalheAlerta({
           </BarChart>
         </ResponsiveContainer>
         <div>
-          <h4 className="text-sm font-semibold mb-2">Top subelementos da unidade</h4>
+          <h4 className="text-sm font-semibold mb-2">
+            {tipo === "concentracao" ? "Top subelementos da unidade" : "Top lançamentos do subelemento"}
+          </h4>
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 text-left">Código</th>
-                  <th className="px-3 py-2 text-left">Descrição</th>
+                  <th className="px-3 py-2 text-left">{tipo === "concentracao" ? "Código" : "Unidade"}</th>
+                  <th className="px-3 py-2 text-left">{tipo === "concentracao" ? "Descrição" : "Fornecedor"}</th>
                   <th className="px-3 py-2 text-right">Valor pago</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {lancsUnid.map((l) => (
+                {filhos.map((l) => (
                   <tr key={l.id}>
-                    <td className="px-3 py-2 font-mono text-xs">{l.subelementos?.codigo}</td>
-                    <td className="px-3 py-2 truncate max-w-[280px]">{l.subelementos?.descricao}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {tipo === "concentracao" ? (
+                        <span className="font-mono">{l.subelementos?.codigo}</span>
+                      ) : (
+                        l.unidades?.nome
+                      )}
+                    </td>
+                    <td className="px-3 py-2 truncate max-w-[280px] text-xs">
+                      {tipo === "concentracao" ? l.subelementos?.descricao : (l.fornecedores?.nome ?? "—")}
+                    </td>
                     <td className="px-3 py-2 text-right font-medium">{fmtBRL(l.valor_pago)}</td>
                   </tr>
                 ))}
