@@ -26,14 +26,15 @@ export type Lancamento = {
 
 export function useLancamentos(exercicio?: number) {
   return useQuery({
-    queryKey: ["lancamentos", exercicio],
+    queryKey: ["lancamentos", exercicio ?? "all"],
     queryFn: async () => {
       let q = supabase
         .from("lancamentos")
         .select(
           "*, unidades(id,nome,tipo), subelementos(id,codigo,descricao,categoria,grupo), fornecedores(id,nome)"
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(10000);
       if (exercicio) q = q.eq("exercicio", exercicio);
       const { data, error } = await q;
       if (error) throw error;
