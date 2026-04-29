@@ -99,10 +99,7 @@ export function LancamentoForm({ open, onOpenChange, lancamento }: Props) {
               </SelectContent>
             </Select>
           </div>
-          <div><Label>Dotação (R$)</Label><Input type="number" step="0.01" value={form.valor_dotacao} onChange={(e) => setForm({ ...form, valor_dotacao: Number(e.target.value) })} /></div>
-          <div><Label>Empenhado (R$)</Label><Input type="number" step="0.01" value={form.valor_empenhado} onChange={(e) => setForm({ ...form, valor_empenhado: Number(e.target.value) })} /></div>
-          <div><Label>Liquidado (R$)</Label><Input type="number" step="0.01" value={form.valor_liquidado} onChange={(e) => setForm({ ...form, valor_liquidado: Number(e.target.value) })} /></div>
-          <div><Label>Pago (R$)</Label><Input type="number" step="0.01" value={form.valor_pago} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} /></div>
+          <div className="col-span-2"><Label>Pago (R$)</Label><Input type="number" step="0.01" value={form.valor_pago} onChange={(e) => setForm({ ...form, valor_pago: Number(e.target.value) })} /></div>
           <div><Label>Função</Label><Input value={form.funcao} onChange={(e) => setForm({ ...form, funcao: e.target.value })} /></div>
           <div><Label>Programa</Label><Input value={form.programa} onChange={(e) => setForm({ ...form, programa: e.target.value })} /></div>
           <div className="col-span-2"><Label>Fonte de recurso</Label><Input value={form.fonte_recurso} onChange={(e) => setForm({ ...form, fonte_recurso: e.target.value })} /></div>
