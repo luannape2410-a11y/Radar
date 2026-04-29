@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { fmtBRL, fmtCompact } from "@/lib/format";
 import type { Lancamento } from "@/hooks/useOrcamento";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -28,13 +28,29 @@ const CORES = ["hsl(215 60% 35%)", "hsl(168 65% 38%)", "hsl(38 92% 50%)", "hsl(0
 
 export function SecaoComparativo({ lancamentos, exercicios }: Props) {
   const [modo, setModo] = useState<"subelemento" | "unidade">("subelemento");
+  const [unidadeFiltro, setUnidadeFiltro] = useState<string>("todas");
   const anos = exercicios.length ? exercicios.slice().sort((a, b) => a - b) : [new Date().getFullYear()];
+
+  // Lista de unidades disponíveis a partir dos lançamentos recebidos
+  const unidadesDisponiveis = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of lancamentos) {
+      if (l.unidade_id) map.set(l.unidade_id, l.unidades?.nome ?? "—");
+    }
+    return Array.from(map, ([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [lancamentos]);
+
+  // Aplica o filtro local de unidade
+  const lancamentosFiltrados = useMemo(
+    () => (unidadeFiltro === "todas" ? lancamentos : lancamentos.filter((l) => l.unidade_id === unidadeFiltro)),
+    [lancamentos, unidadeFiltro]
+  );
 
   // Agrega valor pago por (chave, ano)
   const { linhas, chaveLabel } = useMemo(() => {
     const chaveLabel = modo === "subelemento" ? "Subelemento" : "Unidade";
     const map = new Map<string, { rotulo: string; subtitulo?: string; porAno: Record<number, number> }>();
-    for (const l of lancamentos) {
+    for (const l of lancamentosFiltrados) {
       const id = modo === "subelemento" ? l.subelemento_id : l.unidade_id;
       const rotulo =
         modo === "subelemento"
@@ -56,7 +72,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
       })
       .sort((a, b) => b.total - a.total);
     return { linhas, chaveLabel };
-  }, [lancamentos, modo, anos]);
+  }, [lancamentosFiltrados, modo, anos]);
 
   const top = linhas.slice(0, 12);
   const dataChart = top.map((l) => {
@@ -64,6 +80,22 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
     anos.forEach((a) => (row[String(a)] = l.porAno[a] ?? 0));
     return row;
   });
+
+  // Alertas: subelementos cujo último exercício > exercício anterior
+  const anoAtual = anos[anos.length - 1];
+  const anoAnterior = anos.length >= 2 ? anos[anos.length - 2] : null;
+  const alertasAumento = useMemo(() => {
+    if (modo !== "subelemento" || anoAnterior === null) return [];
+    return linhas
+      .filter((l) => (l.porAno[anoAtual] ?? 0) > (l.porAno[anoAnterior] ?? 0) && (l.porAno[anoAnterior] ?? 0) > 0)
+      .map((l) => ({
+        ...l,
+        atual: l.porAno[anoAtual] ?? 0,
+        anterior: l.porAno[anoAnterior] ?? 0,
+        delta: (l.porAno[anoAtual] ?? 0) - (l.porAno[anoAnterior] ?? 0),
+      }))
+      .sort((a, b) => b.delta - a.delta);
+  }, [linhas, modo, anoAtual, anoAnterior]);
 
   return (
     <section className="space-y-4">
@@ -75,7 +107,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
               Compare o valor pago por {modo === "subelemento" ? "subelemento" : "unidade"} entre os exercícios disponíveis.
             </p>
           </div>
-          <div className="flex items-end gap-3">
+          <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[200px]">
               <Label className="text-xs text-muted-foreground mb-1.5 block">Comparar por</Label>
               <Select value={modo} onValueChange={(v) => setModo(v as "subelemento" | "unidade")}>
@@ -83,6 +115,18 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                 <SelectContent>
                   <SelectItem value="subelemento">Subelemento</SelectItem>
                   <SelectItem value="unidade">Unidade</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-[240px]">
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Unidade</Label>
+              <Select value={unidadeFiltro} onValueChange={setUnidadeFiltro}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas as unidades</SelectItem>
+                  {unidadesDisponiveis.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -97,6 +141,60 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
           </div>
         </div>
       </Card>
+
+      {modo === "subelemento" && anoAnterior !== null && (
+        <Card className="p-0 overflow-hidden border-destructive/40 shadow-[var(--shadow-card)]">
+          <div className="flex items-center gap-2 border-b bg-destructive/10 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <div>
+              <h3 className="text-sm font-semibold text-destructive">
+                Alertas de aumento — {anoAnterior} → {anoAtual}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {alertasAumento.length} subelemento(s) com despesa paga superior à do exercício anterior
+                {unidadeFiltro !== "todas" && " (unidade filtrada)"}.
+              </p>
+            </div>
+          </div>
+          {alertasAumento.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhum subelemento apresentou aumento em relação ao exercício anterior.
+            </div>
+          ) : (
+            <ScrollArea className="h-[320px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted/60 backdrop-blur text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Subelemento</th>
+                    <th className="px-3 py-2 text-right">{anoAnterior}</th>
+                    <th className="px-3 py-2 text-right">{anoAtual}</th>
+                    <th className="px-3 py-2 text-right">Δ R$</th>
+                    <th className="px-3 py-2 text-right">Var.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {alertasAumento.map((a) => (
+                    <tr key={a.id} className="hover:bg-muted/30">
+                      <td className="px-3 py-2">
+                        <div className="font-medium text-xs truncate max-w-[320px]">{a.rotulo}</div>
+                        {a.subtitulo && <div className="text-[10px] text-muted-foreground">{a.subtitulo}</div>}
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs tabular-nums">{fmtBRL(a.anterior)}</td>
+                      <td className="px-3 py-2 text-right text-xs tabular-nums font-semibold">{fmtBRL(a.atual)}</td>
+                      <td className="px-3 py-2 text-right text-xs tabular-nums text-destructive font-semibold">
+                        +{fmtBRL(a.delta)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <VariacaoBadge variacao={a.variacao} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollArea>
+          )}
+        </Card>
+      )}
 
       <Card className="p-5 shadow-[var(--shadow-card)]">
         <h3 className="text-base font-semibold mb-1">Top {top.length} {chaveLabel.toLowerCase()}s — comparação anual</h3>
