@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import {
   Bar,
   BarChart,
@@ -16,8 +17,16 @@ import {
 } from "recharts";
 import { fmtBRL, fmtCompact } from "@/lib/format";
 import type { Lancamento } from "@/hooks/useOrcamento";
-import { ArrowDown, ArrowUp, Minus, AlertTriangle } from "lucide-react";
+import { ArrowDown, ArrowUp, Minus, AlertTriangle, FileText, FileSpreadsheet, FileType2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  exportarComparativoPDF,
+  exportarComparativoXLSX,
+  exportarComparativoDOCX,
+  type AlertaComparativo,
+  type ContextoComparativo,
+} from "@/lib/exportarComparativo";
+import { toast } from "@/hooks/use-toast";
 
 type Props = {
   lancamentos: Lancamento[]; // todos os anos (já filtrados por unidade/função/busca, mas SEM filtro de exercício)
@@ -97,6 +106,35 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
       .sort((a, b) => b.delta - a.delta);
   }, [linhas, modo, anoAtual, anoAnterior]);
 
+  const nomeUnidade =
+    unidadeFiltro === "todas"
+      ? "Todas as unidades"
+      : unidadesDisponiveis.find((u) => u.id === unidadeFiltro)?.nome ?? "Unidade";
+
+  const handleExport = async (fmt: "pdf" | "xlsx" | "docx") => {
+    if (anoAnterior === null) {
+      toast({ title: "Sem comparação possível", description: "É necessário ter pelo menos dois exercícios.", variant: "destructive" });
+      return;
+    }
+    const dados: AlertaComparativo[] = alertasAumento.map((a) => ({
+      rotulo: a.rotulo,
+      subtitulo: a.subtitulo,
+      anterior: a.anterior,
+      atual: a.atual,
+      delta: a.delta,
+      variacao: a.variacao,
+    }));
+    const ctx: ContextoComparativo = { anoAnterior, anoAtual, unidade: nomeUnidade };
+    try {
+      if (fmt === "pdf") exportarComparativoPDF(dados, ctx);
+      else if (fmt === "xlsx") exportarComparativoXLSX(dados, ctx);
+      else await exportarComparativoDOCX(dados, ctx);
+      toast({ title: "Relatório gerado", description: `Arquivo .${fmt} baixado com sucesso.` });
+    } catch (e) {
+      toast({ title: "Erro ao exportar", description: String(e), variant: "destructive" });
+    }
+  };
+
   return (
     <section className="space-y-4">
       <Card className="p-4 shadow-[var(--shadow-card)]">
@@ -144,16 +182,29 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
 
       {modo === "subelemento" && anoAnterior !== null && (
         <Card className="p-0 overflow-hidden border-destructive/40 shadow-[var(--shadow-card)]">
-          <div className="flex items-center gap-2 border-b bg-destructive/10 px-4 py-3">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <div>
-              <h3 className="text-sm font-semibold text-destructive">
-                Alertas de aumento — {anoAnterior} → {anoAtual}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {alertasAumento.length} subelemento(s) com despesa paga superior à do exercício anterior
-                {unidadeFiltro !== "todas" && " (unidade filtrada)"}.
-              </p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-destructive/10 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <div>
+                <h3 className="text-sm font-semibold text-destructive">
+                  Alertas de aumento — {anoAnterior} → {anoAtual}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {alertasAumento.length} subelemento(s) com despesa paga superior à do exercício anterior
+                  {unidadeFiltro !== "todas" && " (unidade filtrada)"}.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => handleExport("pdf")} disabled={alertasAumento.length === 0}>
+                <FileText className="h-4 w-4" /> PDF
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleExport("xlsx")} disabled={alertasAumento.length === 0}>
+                <FileSpreadsheet className="h-4 w-4" /> Excel
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleExport("docx")} disabled={alertasAumento.length === 0}>
+                <FileType2 className="h-4 w-4" /> Word
+              </Button>
             </div>
           </div>
           {alertasAumento.length === 0 ? (
