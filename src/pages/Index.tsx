@@ -145,7 +145,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="alertas" className="mt-4">
-            <SecaoAlertas lancamentos={filtrados} />
+            <SecaoAlertas lancamentos={filtrados} exercicio={filtro.exercicio} />
           </TabsContent>
 
           <TabsContent value="comparativo" className="mt-4">
