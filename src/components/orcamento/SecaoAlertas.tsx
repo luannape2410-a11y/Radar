@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertTriangle, PieChart, Activity, ChevronRight } from "lucide-react";
+import { AlertTriangle, PieChart, Activity, ChevronRight, FileText, FileSpreadsheet, FileType2 } from "lucide-react";
 import { fmtBRL, fmtPct } from "@/lib/format";
 import {
   alertasAtipicos,
@@ -11,6 +11,8 @@ import {
   alertasAltoCusto,
   type AlertaItem,
 } from "@/lib/alertas";
+import { exportarPDF, exportarXLSX, exportarDOCX, type GrupoAlerta } from "@/lib/exportarAlertas";
+import { toast } from "@/hooks/use-toast";
 import type { Lancamento } from "@/hooks/useOrcamento";
 import {
   Bar,
@@ -54,7 +56,7 @@ const tiposConfig: Record<
   },
 };
 
-export function SecaoAlertas({ lancamentos }: { lancamentos: Lancamento[] }) {
+export function SecaoAlertas({ lancamentos, exercicio = new Date().getFullYear() }: { lancamentos: Lancamento[]; exercicio?: number }) {
   const concentracao = useMemo(() => alertasConcentracao(lancamentos), [lancamentos]);
   const altocusto = useMemo(() => alertasAltoCusto(lancamentos), [lancamentos]);
   const atipicos = useMemo(() => alertasAtipicos(lancamentos), [lancamentos]);
@@ -68,6 +70,24 @@ export function SecaoAlertas({ lancamentos }: { lancamentos: Lancamento[] }) {
   const itensTipo = grupos[tipoSel];
   const itemAtivo = itemSel ?? itensTipo[0] ?? null;
 
+  const gruposExport: GrupoAlerta[] = (Object.keys(tiposConfig) as TipoAlerta[]).map((tipo) => ({
+    chave: tipo,
+    titulo: tiposConfig[tipo].titulo,
+    descricao: tiposConfig[tipo].descricao,
+    itens: grupos[tipo],
+  }));
+
+  const handleExport = async (fmt: "pdf" | "xlsx" | "docx") => {
+    try {
+      if (fmt === "pdf") exportarPDF(gruposExport, exercicio);
+      else if (fmt === "xlsx") exportarXLSX(gruposExport, exercicio);
+      else await exportarDOCX(gruposExport, exercicio);
+      toast({ title: "Relatório gerado", description: `Arquivo .${fmt} baixado com sucesso.` });
+    } catch (e) {
+      toast({ title: "Erro ao exportar", description: String(e), variant: "destructive" });
+    }
+  };
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between">
@@ -76,6 +96,17 @@ export function SecaoAlertas({ lancamentos }: { lancamentos: Lancamento[] }) {
           <p className="text-sm text-muted-foreground">
             Identificação automática de situações críticas na execução orçamentária
           </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => handleExport("pdf")}>
+            <FileText className="h-4 w-4" /> PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleExport("xlsx")}>
+            <FileSpreadsheet className="h-4 w-4" /> Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => handleExport("docx")}>
+            <FileType2 className="h-4 w-4" /> Word
+          </Button>
         </div>
       </div>
 
