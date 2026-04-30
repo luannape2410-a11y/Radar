@@ -58,7 +58,16 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
   // Agrega valor pago por (chave, ano)
   const { linhas, chaveLabel } = useMemo(() => {
     const chaveLabel = modo === "subelemento" ? "Subelemento" : "Unidade";
-    const map = new Map<string, { rotulo: string; subtitulo?: string; unidades: Map<string, number>; porAno: Record<number, number> }>();
+    const map = new Map<
+      string,
+      {
+        rotulo: string;
+        subtitulo?: string;
+        unidades: Map<string, number>;
+        unidadesPorAno: Map<string, Record<number, number>>;
+        porAno: Record<number, number>;
+      }
+    >();
     for (const l of lancamentosFiltrados) {
       const id = modo === "subelemento" ? l.subelemento_id : l.unidade_id;
       const rotulo =
@@ -66,10 +75,21 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
           ? `${l.subelementos?.codigo ?? ""} — ${l.subelementos?.descricao ?? "—"}`
           : l.unidades?.nome ?? "—";
       const subtitulo = modo === "subelemento" ? l.subelementos?.categoria ?? undefined : l.unidades?.tipo;
-      const cur = map.get(id) ?? { rotulo, subtitulo, unidades: new Map<string, number>(), porAno: {} };
+      const cur =
+        map.get(id) ??
+        {
+          rotulo,
+          subtitulo,
+          unidades: new Map<string, number>(),
+          unidadesPorAno: new Map<string, Record<number, number>>(),
+          porAno: {},
+        };
       cur.porAno[l.exercicio] = (cur.porAno[l.exercicio] ?? 0) + Number(l.valor_pago);
       const nomeUni = l.unidades?.nome ?? "—";
       cur.unidades.set(nomeUni, (cur.unidades.get(nomeUni) ?? 0) + Number(l.valor_pago));
+      const porAnoUni = cur.unidadesPorAno.get(nomeUni) ?? {};
+      porAnoUni[l.exercicio] = (porAnoUni[l.exercicio] ?? 0) + Number(l.valor_pago);
+      cur.unidadesPorAno.set(nomeUni, porAnoUni);
       map.set(id, cur);
     }
     const linhas = Array.from(map.entries())
@@ -103,12 +123,28 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
     if (modo !== "subelemento" || anoAnterior === null) return [];
     return linhas
       .filter((l) => (l.porAno[anoAtual] ?? 0) > (l.porAno[anoAnterior] ?? 0) && (l.porAno[anoAnterior] ?? 0) > 0)
-      .map((l) => ({
-        ...l,
-        atual: l.porAno[anoAtual] ?? 0,
-        anterior: l.porAno[anoAnterior] ?? 0,
-        delta: (l.porAno[anoAtual] ?? 0) - (l.porAno[anoAnterior] ?? 0),
-      }))
+      .map((l) => {
+        // Identifica apenas as unidades que aumentaram em relação ao ano anterior
+        const unidadesAumento = Array.from(l.unidadesPorAno.entries())
+          .map(([nome, porAno]) => {
+            const at = porAno[anoAtual] ?? 0;
+            const ant = porAno[anoAnterior] ?? 0;
+            return { nome, atual: at, anterior: ant, delta: at - ant };
+          })
+          .filter((u) => u.delta > 0)
+          .sort((a, b) => b.delta - a.delta);
+        const unidadeTop = unidadesAumento[0]?.nome ?? "—";
+        const unidadeLabelAumento =
+          unidadesAumento.length > 1 ? `${unidadeTop} (+${unidadesAumento.length - 1})` : unidadeTop;
+        return {
+          ...l,
+          atual: l.porAno[anoAtual] ?? 0,
+          anterior: l.porAno[anoAnterior] ?? 0,
+          delta: (l.porAno[anoAtual] ?? 0) - (l.porAno[anoAnterior] ?? 0),
+          unidadeLabel: unidadeLabelAumento,
+          unidadesCount: unidadesAumento.length,
+        };
+      })
       .sort((a, b) => b.delta - a.delta);
   }, [linhas, modo, anoAtual, anoAnterior]);
 
