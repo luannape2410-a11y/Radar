@@ -19,6 +19,7 @@ import { fmtBRL } from "@/lib/format";
 export type AlertaComparativo = {
   rotulo: string;
   subtitulo?: string;
+  unidade?: string;
   anterior: number;
   atual: number;
   delta: number;
@@ -58,10 +59,11 @@ export function exportarComparativoPDF(alertas: AlertaComparativo[], ctx: Contex
   } else {
     autoTable(doc, {
       startY: 104,
-      head: [["#", "Subelemento", `Pago ${ctx.anoAnterior}`, `Pago ${ctx.anoAtual}`, "Δ R$", "Variação"]],
+      head: [["#", "Subelemento", "Unidade", `Pago ${ctx.anoAnterior}`, `Pago ${ctx.anoAtual}`, "Δ R$", "Variação"]],
       body: alertas.map((a, i) => [
         String(i + 1),
         a.subtitulo ? `${a.rotulo}\n${a.subtitulo}` : a.rotulo,
+        a.unidade ?? "—",
         fmtBRL(a.anterior),
         fmtBRL(a.atual),
         `+${fmtBRL(a.delta)}`,
@@ -71,10 +73,10 @@ export function exportarComparativoPDF(alertas: AlertaComparativo[], ctx: Contex
       headStyles: { fillColor: [185, 28, 28], textColor: 255 },
       columnStyles: {
         0: { cellWidth: 24 },
-        2: { halign: "right" },
         3: { halign: "right" },
-        4: { halign: "right", textColor: [185, 28, 28], fontStyle: "bold" },
-        5: { halign: "right" },
+        4: { halign: "right" },
+        5: { halign: "right", textColor: [185, 28, 28], fontStyle: "bold" },
+        6: { halign: "right" },
       },
       margin: { left: 40, right: 40 },
     });
@@ -93,11 +95,12 @@ export function exportarComparativoXLSX(alertas: AlertaComparativo[], ctx: Conte
     [`Gerado em ${hoje()}`],
     [`Total de alertas: ${alertas.length}`],
     [],
-    ["#", "Subelemento", "Categoria", `Pago ${ctx.anoAnterior} (R$)`, `Pago ${ctx.anoAtual} (R$)`, "Δ R$", "Variação %"],
+    ["#", "Subelemento", "Categoria", "Unidade", `Pago ${ctx.anoAnterior} (R$)`, `Pago ${ctx.anoAtual} (R$)`, "Δ R$", "Variação %"],
     ...alertas.map((a, i) => [
       i + 1,
       a.rotulo,
       a.subtitulo ?? "",
+      a.unidade ?? "",
       Number(a.anterior.toFixed(2)),
       Number(a.atual.toFixed(2)),
       Number(a.delta.toFixed(2)),
@@ -109,6 +112,7 @@ export function exportarComparativoXLSX(alertas: AlertaComparativo[], ctx: Conte
     { wch: 5 },
     { wch: 50 },
     { wch: 24 },
+    { wch: 28 },
     { wch: 18 },
     { wch: 18 },
     { wch: 16 },
@@ -176,6 +180,7 @@ export async function exportarComparativoDOCX(alertas: AlertaComparativo[], ctx:
       children: [
         celula("#", { bold: true }),
         celula("Subelemento", { bold: true }),
+        celula("Unidade", { bold: true }),
         celula(`Pago ${ctx.anoAnterior}`, { bold: true, align: AlignmentType.RIGHT }),
         celula(`Pago ${ctx.anoAtual}`, { bold: true, align: AlignmentType.RIGHT }),
         celula("Δ R$", { bold: true, align: AlignmentType.RIGHT }),
@@ -188,6 +193,7 @@ export async function exportarComparativoDOCX(alertas: AlertaComparativo[], ctx:
           children: [
             celula(String(i + 1)),
             celula(a.subtitulo ? `${a.rotulo} — ${a.subtitulo}` : a.rotulo),
+            celula(a.unidade ?? "—"),
             celula(fmtBRL(a.anterior), { align: AlignmentType.RIGHT }),
             celula(fmtBRL(a.atual), { align: AlignmentType.RIGHT }),
             celula(`+${fmtBRL(a.delta)}`, { align: AlignmentType.RIGHT, bold: true }),
