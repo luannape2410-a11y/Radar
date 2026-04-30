@@ -58,7 +58,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
   // Agrega valor pago por (chave, ano)
   const { linhas, chaveLabel } = useMemo(() => {
     const chaveLabel = modo === "subelemento" ? "Subelemento" : "Unidade";
-    const map = new Map<string, { rotulo: string; subtitulo?: string; porAno: Record<number, number> }>();
+    const map = new Map<string, { rotulo: string; subtitulo?: string; unidades: Map<string, number>; porAno: Record<number, number> }>();
     for (const l of lancamentosFiltrados) {
       const id = modo === "subelemento" ? l.subelemento_id : l.unidade_id;
       const rotulo =
@@ -66,8 +66,10 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
           ? `${l.subelementos?.codigo ?? ""} — ${l.subelementos?.descricao ?? "—"}`
           : l.unidades?.nome ?? "—";
       const subtitulo = modo === "subelemento" ? l.subelementos?.categoria ?? undefined : l.unidades?.tipo;
-      const cur = map.get(id) ?? { rotulo, subtitulo, porAno: {} };
+      const cur = map.get(id) ?? { rotulo, subtitulo, unidades: new Map<string, number>(), porAno: {} };
       cur.porAno[l.exercicio] = (cur.porAno[l.exercicio] ?? 0) + Number(l.valor_pago);
+      const nomeUni = l.unidades?.nome ?? "—";
+      cur.unidades.set(nomeUni, (cur.unidades.get(nomeUni) ?? 0) + Number(l.valor_pago));
       map.set(id, cur);
     }
     const linhas = Array.from(map.entries())
@@ -77,7 +79,11 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
         const ultimo = totais[totais.length - 1] ?? 0;
         const penultimo = totais[totais.length - 2] ?? 0;
         const variacao = penultimo > 0 ? (ultimo - penultimo) / penultimo : null;
-        return { id, ...v, totais, total, variacao };
+        const unidadesOrdenadas = Array.from(v.unidades.entries()).sort((a, b) => b[1] - a[1]);
+        const unidadeTop = unidadesOrdenadas[0]?.[0] ?? "—";
+        const unidadeLabel =
+          unidadesOrdenadas.length > 1 ? `${unidadeTop} (+${unidadesOrdenadas.length - 1})` : unidadeTop;
+        return { id, ...v, totais, total, variacao, unidadeLabel, unidadesCount: unidadesOrdenadas.length };
       })
       .sort((a, b) => b.total - a.total);
     return { linhas, chaveLabel };
@@ -119,6 +125,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
     const dados: AlertaComparativo[] = alertasAumento.map((a) => ({
       rotulo: a.rotulo,
       subtitulo: a.subtitulo,
+      unidade: a.unidadeLabel,
       anterior: a.anterior,
       atual: a.atual,
       delta: a.delta,
@@ -217,6 +224,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                 <thead className="sticky top-0 bg-muted/60 backdrop-blur text-xs uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left">Subelemento</th>
+                    <th className="px-3 py-2 text-left">Unidade</th>
                     <th className="px-3 py-2 text-right">{anoAnterior}</th>
                     <th className="px-3 py-2 text-right">{anoAtual}</th>
                     <th className="px-3 py-2 text-right">Δ R$</th>
@@ -229,6 +237,14 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                       <td className="px-3 py-2">
                         <div className="font-medium text-xs truncate max-w-[320px]">{a.rotulo}</div>
                         {a.subtitulo && <div className="text-[10px] text-muted-foreground">{a.subtitulo}</div>}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="text-xs truncate max-w-[220px]">{a.unidadeLabel}</div>
+                        {a.unidadesCount > 1 && (
+                          <div className="text-[10px] text-muted-foreground">
+                            {a.unidadesCount} unidades
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-right text-xs tabular-nums">{fmtBRL(a.anterior)}</td>
                       <td className="px-3 py-2 text-right text-xs tabular-nums font-semibold">{fmtBRL(a.atual)}</td>
