@@ -134,7 +134,10 @@ export function exportarXLSX(grupos: GrupoAlerta[], exercicio: number) {
 }
 
 /* ---------------- DOCX ---------------- */
-function celula(texto: string, opts: { bold?: boolean; align?: AlignmentType } = {}) {
+function celula(
+  texto: string,
+  opts: { bold?: boolean; align?: (typeof AlignmentType)[keyof typeof AlignmentType] } = {}
+) {
   return new TableCell({
     children: [
       new Paragraph({
