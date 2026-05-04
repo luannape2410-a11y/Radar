@@ -290,7 +290,9 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                         {a.subtitulo && <div className="text-[10px] text-muted-foreground">{a.subtitulo}</div>}
                       </td>
                       <td className="px-3 py-2">
-                        <div className="text-xs truncate max-w-[220px]">{a.unidadeLabel}</div>
+                        <div className={cn("text-xs max-w-[260px]", exibicaoUnidades === "todas" ? "whitespace-normal break-words" : "truncate")}>
+                          {a.unidadeLabel}
+                        </div>
                         {a.unidadesCount > 1 && (
                           <div className="text-[10px] text-muted-foreground">
                             {a.unidadesCount} unidades
