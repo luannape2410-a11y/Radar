@@ -11,6 +11,7 @@ import { SecaoComparativo } from "@/components/orcamento/SecaoComparativo";
 import { TabelaLancamentos } from "@/components/orcamento/TabelaLancamentos";
 import { ImportadorPlanilha } from "@/components/orcamento/ImportadorPlanilha";
 import { fmtBRL } from "@/lib/format";
+import { useUltimaImportacao } from "@/hooks/useUltimaImportacao";
 
 const Index = () => {
   const [filtro, setFiltro] = useState<FiltroState>({
@@ -26,6 +27,7 @@ const Index = () => {
   const { data: unidades = [] } = useUnidades();
   // Carrega TODOS os exercícios para suportar o comparativo entre anos.
   const { data: lancamentosTodos = [], isLoading } = useLancamentos();
+  const { data: ultimaImportacao } = useUltimaImportacao();
 
   // Lista de funções disponíveis para o filtro
   const funcoes = useMemo(() => {
@@ -105,6 +107,14 @@ const Index = () => {
             <p className="text-xs uppercase tracking-widest text-muted-foreground">Prefeitura Municipal</p>
             <h1 className="text-2xl font-bold">Painel de Execução Orçamentária</h1>
             <p className="text-sm text-muted-foreground">Monitoramento gerencial — exercício {filtro.exercicio}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Última importação:{" "}
+              {ultimaImportacao?.created_at
+                ? `${new Date(ultimaImportacao.created_at).toLocaleString("pt-BR")}${
+                    ultimaImportacao.arquivo_nome ? ` — ${ultimaImportacao.arquivo_nome}` : ""
+                  }${ultimaImportacao.exercicio ? ` (exercício ${ultimaImportacao.exercicio})` : ""}`
+                : "nenhuma importação registrada"}
+            </p>
           </div>
           <div className="flex gap-2">
             <ImportadorPlanilha />
