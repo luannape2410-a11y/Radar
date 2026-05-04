@@ -38,6 +38,7 @@ const CORES = ["hsl(215 60% 35%)", "hsl(168 65% 38%)", "hsl(38 92% 50%)", "hsl(0
 export function SecaoComparativo({ lancamentos, exercicios }: Props) {
   const [modo, setModo] = useState<"subelemento" | "unidade">("subelemento");
   const [unidadeFiltro, setUnidadeFiltro] = useState<string>("todas");
+  const [exibicaoUnidades, setExibicaoUnidades] = useState<"principal" | "todas">("principal");
   const anos = exercicios.length ? exercicios.slice().sort((a, b) => a - b) : [new Date().getFullYear()];
 
   // Lista de unidades disponíveis a partir dos lançamentos recebidos
@@ -135,7 +136,11 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
           .sort((a, b) => b.delta - a.delta);
         const unidadeTop = unidadesAumento[0]?.nome ?? "—";
         const unidadeLabelAumento =
-          unidadesAumento.length > 1 ? `${unidadeTop} (+${unidadesAumento.length - 1})` : unidadeTop;
+          unidadesAumento.length > 1
+            ? exibicaoUnidades === "todas"
+              ? unidadesAumento.map((u) => u.nome).join(", ")
+              : `${unidadeTop} (+${unidadesAumento.length - 1})`
+            : unidadeTop;
         return {
           ...l,
           atual: l.porAno[anoAtual] ?? 0,
@@ -146,7 +151,7 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
         };
       })
       .sort((a, b) => b.delta - a.delta);
-  }, [linhas, modo, anoAtual, anoAnterior]);
+  }, [linhas, modo, anoAtual, anoAnterior, exibicaoUnidades]);
 
   const nomeUnidade =
     unidadeFiltro === "todas"
@@ -208,6 +213,16 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                   {unidadesDisponiveis.map((u) => (
                     <SelectItem key={u.id} value={u.id}>{u.nome}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="min-w-[220px]">
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Exibição de unidades (alertas)</Label>
+              <Select value={exibicaoUnidades} onValueChange={(v) => setExibicaoUnidades(v as "principal" | "todas")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="principal">Apenas a unidade principal</SelectItem>
+                  <SelectItem value="todas">Listar todas que aumentaram</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -275,7 +290,9 @@ export function SecaoComparativo({ lancamentos, exercicios }: Props) {
                         {a.subtitulo && <div className="text-[10px] text-muted-foreground">{a.subtitulo}</div>}
                       </td>
                       <td className="px-3 py-2">
-                        <div className="text-xs truncate max-w-[220px]">{a.unidadeLabel}</div>
+                        <div className={cn("text-xs max-w-[260px]", exibicaoUnidades === "todas" ? "whitespace-normal break-words" : "truncate")}>
+                          {a.unidadeLabel}
+                        </div>
                         {a.unidadesCount > 1 && (
                           <div className="text-[10px] text-muted-foreground">
                             {a.unidadesCount} unidades
