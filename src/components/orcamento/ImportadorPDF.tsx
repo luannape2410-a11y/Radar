@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
 import * as pdfjs from "pdfjs-dist";
-// @ts-expect-error - vite worker import
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
