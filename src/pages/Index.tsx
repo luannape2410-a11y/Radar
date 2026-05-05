@@ -10,6 +10,7 @@ import { SecaoAlertas } from "@/components/orcamento/SecaoAlertas";
 import { SecaoComparativo } from "@/components/orcamento/SecaoComparativo";
 import { TabelaLancamentos } from "@/components/orcamento/TabelaLancamentos";
 import { ImportadorPlanilha } from "@/components/orcamento/ImportadorPlanilha";
+import { ImportadorPDF } from "@/components/orcamento/ImportadorPDF";
 import { fmtBRL } from "@/lib/format";
 import { useUltimaImportacao } from "@/hooks/useUltimaImportacao";
 
@@ -118,6 +119,7 @@ const Index = () => {
           </div>
           <div className="flex gap-2">
             <ImportadorPlanilha />
+            <ImportadorPDF />
           </div>
         </div>
       </header>
