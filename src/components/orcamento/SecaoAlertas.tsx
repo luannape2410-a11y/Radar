@@ -42,7 +42,7 @@ const tiposConfig: Record<
   },
   altocusto: {
     titulo: "Subelementos de alto custo",
-    descricao: "Categorias que respondem por ≥ 10% do pago",
+    descricao: "Top 10 categorias com maior valor pago",
     icon: AlertTriangle,
     tone: "text-destructive bg-destructive/10",
     cor: "hsl(var(--destructive))",
@@ -58,7 +58,7 @@ const tiposConfig: Record<
 
 export function SecaoAlertas({ lancamentos, exercicio = new Date().getFullYear() }: { lancamentos: Lancamento[]; exercicio?: number }) {
   const concentracao = useMemo(() => alertasConcentracao(lancamentos), [lancamentos]);
-  const altocusto = useMemo(() => alertasAltoCusto(lancamentos), [lancamentos]);
+  const altocusto = useMemo(() => alertasAltoCusto(lancamentos, 0).slice(0, 10), [lancamentos]);
   const atipicos = useMemo(() => alertasAtipicos(lancamentos), [lancamentos]);
 
   const grupos: Record<TipoAlerta, AlertaItem[]> = { concentracao, altocusto, atipico: atipicos };
