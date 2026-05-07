@@ -11,6 +11,7 @@ import { SecaoComparativo } from "@/components/orcamento/SecaoComparativo";
 import { TabelaLancamentos } from "@/components/orcamento/TabelaLancamentos";
 import { ImportadorPlanilha } from "@/components/orcamento/ImportadorPlanilha";
 import { ImportadorPDF } from "@/components/orcamento/ImportadorPDF";
+import { LimparDados } from "@/components/orcamento/LimparDados";
 import { fmtBRL } from "@/lib/format";
 import { useUltimaImportacao } from "@/hooks/useUltimaImportacao";
 
@@ -120,6 +121,7 @@ const Index = () => {
           <div className="flex gap-2">
             <ImportadorPlanilha />
             <ImportadorPDF />
+            <LimparDados />
           </div>
         </div>
       </header>
