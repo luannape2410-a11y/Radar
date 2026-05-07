@@ -27,13 +27,35 @@ export type GrupoAlerta = {
 const hoje = () => new Date().toLocaleString("pt-BR");
 const stamp = () => new Date().toISOString().slice(0, 10);
 
+function detalheItem(g: GrupoAlerta, it: AlertaItem) {
+  if (g.chave === "atipico") {
+    const ctx = it.contexto as { subelemento?: string };
+    return ctx.subelemento ?? it.detalhe;
+  }
+  return it.detalhe;
+}
+
+function metricaItem(g: GrupoAlerta, it: AlertaItem) {
+  if (g.chave === "atipico") {
+    const ctx = it.contexto as { media?: number };
+    const media = Number(ctx.media ?? 0);
+    if (media > 0) return (it.valor - media) / media;
+    return 0;
+  }
+  return it.metrica;
+}
+
+function metricaTexto(g: GrupoAlerta, it: AlertaItem) {
+  return fmtPct(metricaItem(g, it));
+}
+
 function linhasParaTabela(g: GrupoAlerta) {
   return g.itens.map((it, i) => [
     String(i + 1),
     it.rotulo,
-    it.detalhe,
+    detalheItem(g, it),
     fmtBRL(it.valor),
-    g.chave === "atipico" ? `${it.metrica.toFixed(1)}σ` : fmtPct(it.metrica),
+    metricaTexto(g, it),
   ]);
 }
 
@@ -64,7 +86,7 @@ export function exportarPDF(grupos: GrupoAlerta[], exercicio: number) {
 
     autoTable(doc, {
       startY: y + 22,
-      head: [["#", "Item", "Detalhe", "Valor pago", "Métrica"]],
+      head: [["#", "Item", "Detalhe", "Valor pago", g.chave === "atipico" ? "% acima da média" : "Métrica"]],
       body: linhasParaTabela(g),
       styles: { fontSize: 9, cellPadding: 4 },
       headStyles: { fillColor: [37, 99, 235], textColor: 255 },
@@ -109,15 +131,13 @@ export function exportarXLSX(grupos: GrupoAlerta[], exercicio: number) {
 
   for (const g of grupos) {
     const aoa: (string | number)[][] = [
-      ["#", "Item", "Detalhe", "Valor pago (R$)", g.chave === "atipico" ? "Z-score" : "% do total"],
+      ["#", "Item", "Detalhe", "Valor pago (R$)", g.chave === "atipico" ? "% acima da média" : "% do total"],
       ...g.itens.map((it, i) => [
         i + 1,
         it.rotulo,
-        it.detalhe,
+        detalheItem(g, it),
         Number(it.valor.toFixed(2)),
-        g.chave === "atipico"
-          ? Number(it.metrica.toFixed(2))
-          : Number((it.metrica * 100).toFixed(2)),
+        Number((metricaItem(g, it) * 100).toFixed(2)),
       ]),
     ];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -203,10 +223,10 @@ export async function exportarDOCX(grupos: GrupoAlerta[], exercicio: number) {
           children: [
             celula(String(i + 1)),
             celula(it.rotulo),
-            celula(it.detalhe),
+            celula(detalheItem(g, it)),
             celula(fmtBRL(it.valor), { align: AlignmentType.RIGHT }),
             celula(
-              g.chave === "atipico" ? `${it.metrica.toFixed(1)}σ` : fmtPct(it.metrica),
+              metricaTexto(g, it),
               { align: AlignmentType.RIGHT }
             ),
           ],
