@@ -113,9 +113,9 @@ const Index = () => {
               className="h-16 w-auto shrink-0"
             />
             <div>
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Prefeitura Municipal</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Prefeitura Municipal de Vazante-MG</p>
               <h1 className="text-2xl font-bold">Painel de Execução Orçamentária</h1>
-              <p className="text-sm text-muted-foreground">Monitoramento gerencial — exercício {filtro.exercicio}</p>
+              <p className="text-sm text-muted-foreground">Monitoramento da Despesa por Subelementos — exercício {filtro.exercicio}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Última importação:{" "}
               {ultimaImportacao?.created_at
