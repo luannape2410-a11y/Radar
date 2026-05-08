@@ -14,6 +14,7 @@ import { ImportadorPDF } from "@/components/orcamento/ImportadorPDF";
 import { LimparDados } from "@/components/orcamento/LimparDados";
 import { fmtBRL } from "@/lib/format";
 import { useUltimaImportacao } from "@/hooks/useUltimaImportacao";
+import radarLogo from "@/assets/radar-logo.png";
 
 const Index = () => {
   const [filtro, setFiltro] = useState<FiltroState>({
@@ -105,10 +106,16 @@ const Index = () => {
       {/* Topbar */}
       <header className="border-b bg-card">
         <div className="container flex flex-col gap-3 py-5 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Prefeitura Municipal</p>
-            <h1 className="text-2xl font-bold">Painel de Execução Orçamentária</h1>
-            <p className="text-sm text-muted-foreground">Monitoramento gerencial — exercício {filtro.exercicio}</p>
+          <div className="flex items-center gap-4">
+            <img
+              src={radarLogo}
+              alt="RADAR — Acompanhamento e Monitoramento da Execução Orçamentária"
+              className="h-16 w-auto shrink-0"
+            />
+            <div>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Prefeitura Municipal</p>
+              <h1 className="text-2xl font-bold">Painel de Execução Orçamentária</h1>
+              <p className="text-sm text-muted-foreground">Monitoramento gerencial — exercício {filtro.exercicio}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Última importação:{" "}
               {ultimaImportacao?.created_at
@@ -117,6 +124,7 @@ const Index = () => {
                   }${ultimaImportacao.exercicio ? ` (exercício ${ultimaImportacao.exercicio})` : ""}`
                 : "nenhuma importação registrada"}
             </p>
+            </div>
           </div>
           <div className="flex gap-2">
             <ImportadorPlanilha />
