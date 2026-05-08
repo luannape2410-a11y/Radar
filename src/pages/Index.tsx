@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, Building2, ListChecks, CheckCircle2, Layers, Receipt, GitCompareArrows } from "lucide-react";
+import { Info } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { useLancamentos, useUnidades } from "@/hooks/useOrcamento";
 import { Filtros, bucketsParaMeses, type FiltroState } from "@/components/orcamento/Filtros";
 import { KpiCard } from "@/components/orcamento/KpiCard";
@@ -130,6 +133,12 @@ const Index = () => {
             <ImportadorPlanilha />
             <ImportadorPDF />
             <LimparDados />
+            <Button asChild variant="outline" size="sm">
+              <Link to="/sobre">
+                <Info className="h-4 w-4 mr-1.5" />
+                Sobre
+              </Link>
+            </Button>
           </div>
         </div>
       </header>
